@@ -19,13 +19,14 @@ setwd("~/Desktop/hw10-garyzhubc")
 
 #Use the rvest package to scrape data from the web to make two data objects.
 
-For the first data object, we scrape the aviation incident data from wikipedia. The data is cleaned using `stringr` package. We make a plot of death per incident over years to indicate severity. As shown, there seems to be a periodic pattern of severity.
+For the first data object, we scrape the aviation incident data from wikipedia by first selecting the node of the desired table. The html is pre-downloaded to avoid connection issues. The data is cleaned using `stringr` package. We make a plot of death per incident over years to indicate severity. As shown, there seems to be a periodic pattern of severity.
 ```{r}
-download.file("https://en.wikipedia.org/wiki/Aviation_accidents_and_incidents", destfile = "html/Aviation_accidents_and_incidents.html", quiet=TRUE)
+# download.file("https://en.wikipedia.org/wiki/Aviation_accidents_and_incidents", destfile = "html/Aviation_accidents_and_incidents.html", quiet=TRUE)
 
 air.incidents <- read_html("html/Aviation_accidents_and_incidents.html") %>% 
+  html_nodes(xpath='//*[@id="mw-content-text"]/div/table[2]') %>% 
   html_table(fill=TRUE) %>% 
-  .[[2]] %>% 
+  .[[1]] %>% 
   rename("Deaths"="Deaths[52]") %>% 
   rename("Incidents"="# of incidents[53]") %>% 
   rowwise() %>% 
@@ -36,13 +37,13 @@ air.incidents <- read_html("html/Aviation_accidents_and_incidents.html") %>%
 write_csv(air.incidents,"data/air_incidents.csv")
 air.incidents <- read_csv("data/air_incidents.csv")
 
-ggplot(air.incidents, aes(x=Year, y=Deaths/Incidents, color="red")) +
+ggplot(air.incidents, aes(x=Year, y=Deaths/Incidents)) +
   geom_line()
 ```
 
 For the second data object, we scraped the wikipedia page of work by Verdi and made a jitterplot of year of first performance in two different languages. Again the data is cleaned by `stringr`.
 ```{r}
-download.file("https://en.wikipedia.org/wiki/List_of_compositions_by_Giuseppe_Verdi", destfile = "html/List_of_compositions_by_Giuseppe_Verdi.html", quiet=TRUE)
+# download.file("https://en.wikipedia.org/wiki/List_of_compositions_by_Giuseppe_Verdi", destfile = "html/List_of_compositions_by_Giuseppe_Verdi.html", quiet=TRUE)
 
 opera <- read_html("html/List_of_compositions_by_Giuseppe_Verdi.html") %>% 
   html_table(fill=TRUE) %>% 
@@ -60,7 +61,7 @@ ggplot(opera, aes(x=Language,y=Year,color=Language)) +
 
 #Make two requests for data two make two data objects.
 
-For the first data object, we obtain data from fit a linear relationship between starship lengths and maximum atmosphering speed of starships. The data is requested from https://swapi.co. Note there is a cap of 1000 requests per day per IP address for this API.
+For the first data object, we obtain data from fit a linear relationship between starship lengths and maximum atmosphering speed of starships legended by cost. The data is requested from https://swapi.co. Note there is a cap of 1000 requests per day per IP address for this API.
 ```{r}
 starships1 <- content(GET("https://swapi.co/api/starships/?page=1"))$results
 starships2 <- content(GET("https://swapi.co/api/starships/?page=2"))$results
@@ -70,20 +71,21 @@ starships <- data.frame(do.call(rbind,list(do.call(rbind,starships1),do.call(rbi
 
 starships$length <- as.integer(starships$length)
 starships$max_atmosphering_speed <- as.integer(starships$max_atmosphering_speed)
+starships$cost_in_credits <- as.integer(starships$cost_in_credits)
 
-write_csv(select(starships,length,max_atmosphering_speed),"data/starships.csv")
+write_csv(select(starships,length,max_atmosphering_speed,cost_in_credits),"data/starships.csv")
 starships <- read_csv("data/starships.csv")
 
 starships %>% 
   drop_na() %>% 
-  ggplot(aes(x=length,y=max_atmosphering_speed)) + 
+  ggplot(aes(x=length,y=max_atmosphering_speed,color=cost_in_credits)) + 
   geom_point() + 
-  xlim(0,100) + 
+  xlim(5,40) + 
   ylim(200,1750) +
   geom_smooth(method="lm")
 ```
 
-For the second data object, we make a histogram of height distribution of Star Wars characters.
+For the second data object, we make a histogram of height distribution of Star Wars people. 
 ```{r}
 people1 <- content(GET("https://swapi.co/api/people/?page=1"))$results
 people2 <- content(GET("https://swapi.co/api/people/?page=2"))$results
@@ -98,13 +100,12 @@ people9 <- content(GET("https://swapi.co/api/people/?page=9"))$results
 people <- data.frame(do.call(rbind,list(do.call(rbind,people1),do.call(rbind,people2),do.call(rbind,people3),do.call(rbind,people4),do.call(rbind,people5),do.call(rbind,people6),do.call(rbind,people7),do.call(rbind,people8),do.call(rbind,people9))))
 
 people$height <- as.integer(people$height)
-people$mass <- as.integer(people$mass)
 
-write_csv(select(people,height,mass),"data/people.csv")
+write_csv(cbind(select(people,height)),"data/people.csv")
 people <- read_csv("data/people.csv")
 
 people %>% 
-  ggplot() + 
-  geom_histogram(aes(x=height))
+  ggplot(aes(x=height)) + 
+  geom_histogram()
 ```
 
