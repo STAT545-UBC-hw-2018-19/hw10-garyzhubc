@@ -5,6 +5,7 @@ date: '2018-12-01'
 output:
   html_document:
     toc: TRUE
+    toc_float: TRUE
 ---
 
 ```{r}
@@ -14,10 +15,11 @@ library(stringr)
 library(rvest)
 library(httr)
 library(jsonlite)
-setwd("~/Desktop/hw10-garyzhubc")
+setwd("~/Desktop/stat-545/hw10-garyzhubc")
 ```
 
-#Use the rvest package to scrape data from the web to make two data objects.
+#Scrape data
+Use the rvest package to scrape data from the web to make two data objects.
 
 For the first data object, we scrape the aviation incident data from wikipedia by first selecting the node of the desired table. The html is pre-downloaded to avoid connection issues. The data is cleaned using `stringr` package. We make a plot of death per incident over years to indicate severity. As shown, there seems to be a periodic pattern of severity.
 ```{r}
@@ -59,7 +61,7 @@ ggplot(opera, aes(x=Language,y=Year,color=Language)) +
   
 ```
 
-#Make two requests for data two make two data objects.
+#Make API queries
 
 For the first data object, we obtain data from fit a linear relationship between starship lengths and maximum atmosphering speed of starships legended by cost. The data is requested from https://swapi.co. Note there is a cap of 1000 requests per day per IP address for this API.
 ```{r}
@@ -85,7 +87,7 @@ starships %>%
   geom_smooth(method="lm")
 ```
 
-For the second data object, we make a histogram of height distribution of Star Wars people. 
+For the second data object, we make a histogram of height distribution of Star Wars people colored by gender. 
 ```{r}
 people1 <- content(GET("https://swapi.co/api/people/?page=1"))$results
 people2 <- content(GET("https://swapi.co/api/people/?page=2"))$results
@@ -99,13 +101,15 @@ people9 <- content(GET("https://swapi.co/api/people/?page=9"))$results
 
 people <- data.frame(do.call(rbind,list(do.call(rbind,people1),do.call(rbind,people2),do.call(rbind,people3),do.call(rbind,people4),do.call(rbind,people5),do.call(rbind,people6),do.call(rbind,people7),do.call(rbind,people8),do.call(rbind,people9))))
 
-people$height <- as.integer(people$height)
+people$height <- as.integer(unlist(people$height))
+people$gender <- as.factor(unlist(people$gender))
 
-write_csv(cbind(select(people,height)),"data/people.csv")
-people <- read_csv("data/people.csv")
+write_csv(select(people,height,gender),"data/people.csv")
+people <- read_csv("data/people.csv",na=c("n/a","NA"))
 
 people %>% 
-  ggplot(aes(x=height)) + 
+  drop_na() %>% 
+  ggplot(aes(x=height,fill=gender)) + 
   geom_histogram()
 ```
 
